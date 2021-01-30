@@ -1,0 +1,65 @@
+create table orders (order_id char(5), user_id char(4), lunch_type varchar(100), days_of_subscription integer, box integer);
+
+insert into orders VALUES (91881,1011,'Basic Lunch',2,10);
+insert into orders VALUES (82191,1012,'Deluxe Lunch',5,8);
+insert into orders VALUES (72817,1011,'Healthy Lunch',3,3);
+insert into orders VALUES (91289,1013,'Healthy Lunch',10,1);
+insert into orders VALUES (81828,1012,'Deluxe Lunch',2,2);
+insert into orders VALUES (82917,1012,'Healthy Lunch',2,1);
+
+create table deliveries (delivery_id char(6), order_id char(5), delivery_date DATE, box integer);
+
+insert into deliveries VALUES (101910,91881,'2018-08-01', 10);
+insert into deliveries VALUES (101891,82191,'2018-08-01',8);
+insert into deliveries VALUES (110000,91881,'2018-08-02',10);
+insert into deliveries VALUES (110011,82191,'2018-08-02',8);
+insert into deliveries VALUES (110200,72817,'2018-08-02',3);
+insert into deliveries VALUES (142932,91289,'2018-08-10',1);
+insert into deliveries VALUES (169281,81828,'2018-08-20',2);
+insert into deliveries VALUES (187181,81828,'2018-08-25',2);
+
+create table cashbacks(delivery_id char(6), cashback integer);
+insert into cashbacks VALUES (101910,50000);
+insert into cashbacks VALUES (101891,38400);
+insert into cashbacks VALUES (110000,50000);
+insert into cashbacks VALUES (110000,38400);
+insert into cashbacks VALUES (110011,10500);
+insert into cashbacks VALUES (110200,10500);
+insert into cashbacks VALUES (169281,3000);
+insert into cashbacks VALUES (187181,3000);
+
+create table targeted_table(user_id char(4), total_orders integer, total_boxes_ordered integer, total_deluxe_boxes integer, total_basic_boxes integer, total_healthy_boxes integer, total_boxes_delivered integer, boxes_remaining integer, total_cashback integer);
+
+select 
+	o.user_id, 
+    (select count(b.order_id) from orders b where b.user_id=o.user_id group by user_id) AS total_order, 
+    (select SUM(days_of_subscription * box) from orders c where c.user_id=o.user_id group by user_id) AS total_boxes_ordered, 
+    (select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Deluxe Lunch' group by user_id) AS total_deluxe_boxes,
+    (select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Basic Lunch' group by user_id) AS total_basic_boxes,
+    (select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Healthy Lunch' group by user_id) AS total_healthy_boxes,
+    (select SUM(dd.box) from orders c inner join deliveries dd on dd.order_id = c.order_id where c.user_id = o.user_id group by user_id) AS total_boxes_delivered,
+    (select SUM(days_of_subscription * box) from orders c where c.user_id=o.user_id group by user_id) - (select SUM(dd.box) from orders c inner join deliveries dd on dd.order_id = c.order_id where c.user_id = o.user_id group by user_id) AS boxes_remaining,
+    SUM(c.cashback) AS total_cashback     
+from orders o
+inner join deliveries d on o.order_id = d.order_id
+left join cashbacks c on d.delivery_id = c.delivery_id
+group by user_id
+
+
+INSERT INTO targeted_table
+select 
+	o.user_id, 
+    COUNT(DISTINCT o.order_id) AS total_order, 
+    IFNULL(SUM(DISTINCT o.days_of_subscription * o.box),0) AS total_boxes_ordered, 
+    IFNULL((select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Deluxe Lunch' group by user_id),0) AS total_deluxe_boxes,
+    IFNULL((select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Basic Lunch' group by user_id),0) AS total_basic_boxes,
+    IFNULL((select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Healthy Lunch' group by user_id),0) AS total_healthy_boxes,
+    IFNULL((select SUM(dd.box) from orders c inner join deliveries dd on dd.order_id = c.order_id where c.user_id = o.user_id group by user_id),0) AS total_boxes_delivered,
+    IFNULL((select SUM(days_of_subscription * box) from orders c where c.user_id=o.user_id group by user_id) - (select SUM(dd.box) from orders c inner join deliveries dd on dd.order_id = c.order_id where c.user_id = o.user_id group by user_id),0) AS boxes_remaining,
+    IFNULL(SUM(c.cashback),0) AS total_cashback     
+from orders o
+left join deliveries d on o.order_id = d.order_id
+left join cashbacks c on d.delivery_id = c.delivery_id
+group by user_id
+
+select * from targeted_table
