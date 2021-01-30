@@ -30,22 +30,6 @@ insert into cashbacks VALUES (187181,3000);
 
 create table targeted_table(user_id char(4), total_orders integer, total_boxes_ordered integer, total_deluxe_boxes integer, total_basic_boxes integer, total_healthy_boxes integer, total_boxes_delivered integer, boxes_remaining integer, total_cashback integer);
 
-select 
-	o.user_id, 
-    (select count(b.order_id) from orders b where b.user_id=o.user_id group by user_id) AS total_order, 
-    (select SUM(days_of_subscription * box) from orders c where c.user_id=o.user_id group by user_id) AS total_boxes_ordered, 
-    (select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Deluxe Lunch' group by user_id) AS total_deluxe_boxes,
-    (select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Basic Lunch' group by user_id) AS total_basic_boxes,
-    (select SUM(days_of_subscription * box) from orders c where c.user_id = o.user_id and lunch_type = 'Healthy Lunch' group by user_id) AS total_healthy_boxes,
-    (select SUM(dd.box) from orders c inner join deliveries dd on dd.order_id = c.order_id where c.user_id = o.user_id group by user_id) AS total_boxes_delivered,
-    (select SUM(days_of_subscription * box) from orders c where c.user_id=o.user_id group by user_id) - (select SUM(dd.box) from orders c inner join deliveries dd on dd.order_id = c.order_id where c.user_id = o.user_id group by user_id) AS boxes_remaining,
-    SUM(c.cashback) AS total_cashback     
-from orders o
-inner join deliveries d on o.order_id = d.order_id
-left join cashbacks c on d.delivery_id = c.delivery_id
-group by user_id
-
-
 INSERT INTO targeted_table
 select 
 	o.user_id, 
@@ -60,6 +44,6 @@ select
 from orders o
 left join deliveries d on o.order_id = d.order_id
 left join cashbacks c on d.delivery_id = c.delivery_id
-group by user_id
+group by user_id;
 
-select * from targeted_table
+select * from targeted_table;
